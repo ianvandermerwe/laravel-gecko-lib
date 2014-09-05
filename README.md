@@ -2,13 +2,13 @@
 =================
 
 <img src="http://geckoweb.co.za/assets/images/Gecko.png"/>
---
-http://www.geckoweb.co.za
---
-Custom Email Queue
---
-Mailer with Email queue hookup
---
+
+- Custom Email Queue
+
+- Mailer with Email queue hookup
+
+- http://www.geckoweb.co.za
+
 #Installation
 
 Require this package in your `composer.json` and update composer. This will download the package.
