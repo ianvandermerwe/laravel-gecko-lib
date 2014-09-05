@@ -17,7 +17,7 @@
             "src/gecko/geckoMailerLibs"
         ],
         "psr-0": {
-            "Vendor\\Gecko\\": "src/"
+            "Geckoweb\\Gecko\\": "src/"
         }
     },
     "minimum-stability": "stable"
