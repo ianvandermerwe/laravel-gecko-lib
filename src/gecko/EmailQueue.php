@@ -16,8 +16,8 @@ class EmailQueue extends Eloquent{
     public static function proccess_mail_list(){
         $emailQueue = new EmailQueue();
 
-        $processAmountImportantLeft = $emailQueue->default_important_process_amount;
-        $processAmountLeft = $emailQueue->default_process_amount;
+        $processAmountImportantLeft = Config::get('mail.email_queue_important_batch');
+        $processAmountLeft = Config::get('mail.email_queue_normal_batch');
 
         $processedSuccessfulCount = 0;
         $processedFailedCount = 0;
