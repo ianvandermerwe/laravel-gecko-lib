@@ -1,11 +1,14 @@
 ##Laravel Gecko Lib
 =================
 
-<img src="http://geckoweb.co.za/assets/images/Gecko.png"/>(http://www.geckoweb.co.za)
-
--Custom Email Queue
--Mailer with Email queue hookup
-
+<img src="http://geckoweb.co.za/assets/images/Gecko.png"/>
+--
+http://www.geckoweb.co.za
+--
+Custom Email Queue
+--
+Mailer with Email queue hookup
+--
 #Installation
 
 Require this package in your `composer.json` and update composer. This will download the package.
