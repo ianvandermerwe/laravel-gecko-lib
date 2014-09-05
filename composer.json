@@ -1,0 +1,24 @@
+{
+    "name": "vendor/gecko",
+    "description": "Laravel Gecko Components",
+    "authors": [
+        {
+            "name": "Ian van der Merwe",
+            "email": "ian@geckoweb.co.za"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0",
+        "illuminate/support": "4.2.*"
+    },
+    "autoload": {
+        "classmap": [
+            "src/gecko",
+            "src/gecko/geckoMailerLibs"
+        ],
+        "psr-0": {
+            "Vendor\\Gecko\\": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+}
