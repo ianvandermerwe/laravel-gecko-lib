@@ -9,7 +9,13 @@
 class GeckoMailer{
 
     public function ProcessEmail($mailItem){
+
         $ret = $this->_process_EmailSend($mailItem);
+
+        if($ret == true){
+            $mailItem->sent_flag = 1;
+            $mailItem->save();
+        }
         return $ret;
     }
 
@@ -56,7 +62,7 @@ class GeckoMailer{
             if (Config::get('mail.use_queue')){
                 return true;
             } else {
-                $ret = $this->_process_EmailSend($mailItem);
+                $ret = $this->ProcessEmail($mailItem);
             }
 
             return (bool) $ret;

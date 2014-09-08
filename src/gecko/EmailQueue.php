@@ -14,7 +14,7 @@ class EmailQueue extends Eloquent{
      */
 
     public static function proccess_mail_list(){
-        $emailQueue = new EmailQueue(); 
+        $emailQueue = new EmailQueue();
 
         $processAmountImportantLeft = Config::get('mail.email_queue_important_batch');
         $processAmountLeft = Config::get('mail.email_queue_normal_batch');
@@ -70,12 +70,7 @@ class EmailQueue extends Eloquent{
 
             $mailer = new GeckoMailer();
 
-            $ret = $mailer->ProcessEmail($emailItem);
-
-            if($ret == true){
-                $emailItem->sent_flag = 1;
-                $emailItem->save();
-            }
+            $mailer->ProcessEmail($emailItem);
         }
         catch(Exception $ex)
         {
