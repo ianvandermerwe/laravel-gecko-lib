@@ -13,7 +13,7 @@ class GeckoMailer{
         $ret = $this->_process_EmailSend($mailItem);
 
         if($ret == true){
-            $mailItem->sent_flag = 1;
+            $mailItem->sent_flag = '1';
             $mailItem->save();
         }
         return $ret;
@@ -65,7 +65,7 @@ class GeckoMailer{
         return (bool) $ret;
     }
 
-    private function  _process_EmailSend($mailItem){
+    private function _process_EmailSend($mailItem){
         $mail = new PHPMailer(true);
 
         $mail->CharSet = "utf-8";
@@ -80,7 +80,7 @@ class GeckoMailer{
             $mail->IsMail();
         }
 
-        $mail->Sender = $mailItem->to;
+        //$mail->Sender = $mailItem->to; ??? possibly from
 
         $mail->IsHTML(true);
 
@@ -96,12 +96,15 @@ class GeckoMailer{
             $mail->FromName = Config::get('mail.fromName');
         }
 
-        $mailItem->to = explode(',',$mailItem->to);
+        if(count($mailItem->to > 1)){
 
-        if(count($mailItem->to) > 1){
+            $mailItem->to = explode(',',$mailItem->to);
+
             foreach($mailItem->to as $emailAddress){
                 $mail->AddAddress($emailAddress);
             }
+
+            $mailItem->to = implode(',',$mailItem->to);
         }else{
             $mail->AddAddress($mailItem->to);
         }
