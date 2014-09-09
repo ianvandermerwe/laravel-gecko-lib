@@ -19,59 +19,50 @@ class GeckoMailer{
         return $ret;
     }
 
-    public function SendEmail($to, $cc = "", $subject, $message, $priority = 5, $data = null, $template = "", $sendattachment = false, $file1 = "", $file2 = "", $file3 = "") {
+    /**
+    $to -> string || implode(',',$array)
+    $cc -> string || implode(',',$array)
+    */
+    public function SendEmail($to, $cc = "", $subject, $message, $priority = 5, $from = '', $fromName = '', $data = null, $template = "", $sendattachment = false, $file1 = "", $file2 = "", $file3 = "") {
 
-        $this->SendFullEmail($to, $cc, $subject, $message, $priority, $data, $template, $sendattachment, $file1, $file2, $file3);
+        $this->SendFullEmail($to, $cc, $subject, $message, $priority, $from, $fromName, $data, $template, $sendattachment, $file1, $file2, $file3);
     }
 
-    private function SendFullEmail($to, $cc, $subject, $message, $priority, $data, $template, $sendattachment = false, $file1, $file2, $file3) {
-        try
-        {
-            try
-            {
-                $mailItem = new EmailItem();
-                $mailItem->to = $to;
-                $mailItem->cc = $cc;
-                $mailItem->subject = $subject;
-                $mailItem->message = $message;
+    private function SendFullEmail($to, $cc, $subject, $message, $priority, $from, $fromName, $data, $template, $sendattachment = false, $file1, $file2, $file3) {
 
-                $mailItem->priority = $priority;
+        $mailItem = new EmailItem();
+        $mailItem->to = $to;
+        $mailItem->cc = $cc;
+        $mailItem->from = $from;
+        $mailItem->fromName = $fromName;
+        $mailItem->subject = $subject;
+        $mailItem->message = $message;
+        $mailItem->priority = $priority;
+        $mailItem->sent_flag = 0;
 
-                if($template != ''){
-                    $mailItem->email_template = $template;
-                }
-
-                $mailItem->data = json_encode($data);
-                $mailItem->sent_flag = 0;
-
-                $mailItem->send_attachment = $sendattachment;
-                if($sendattachment == true){
-                    $mailItem->file1 = $file1;
-                    $mailItem->file2 = $file2;
-                    $mailItem->file3 = $file3;
-                }
-
-                $mailItem->save();
-            }
-            catch(\Whoops\Example\Exception $ex)
-            {
-                TextDebugging::LogError($ex,__CLASS__,__FILE__,__LINE__);
-                return false;
-            }
-
-            if (Config::get('mail.use_queue')){
-                return true;
-            } else {
-                $ret = $this->ProcessEmail($mailItem);
-            }
-
-            return (bool) $ret;
+        if($template != ''){
+            $mailItem->email_template = $template;
         }
-        catch (Exception $ex)
-        {
-            TextDebugging::LogError($ex->getMessage(),__CLASS__,__FILE__,__LINE__);
-            return false;
+
+        $mailItem->data = json_encode($data);
+
+
+        $mailItem->send_attachment = $sendattachment;
+        if($sendattachment == true){
+            $mailItem->file1 = $file1;
+            $mailItem->file2 = $file2;
+            $mailItem->file3 = $file3;
         }
+
+        $mailItem->save();
+
+        if (Config::get('mail.use_queue')){
+            return true;
+        } else {
+            $ret = $this->ProcessEmail($mailItem);
+        }
+
+        return (bool) $ret;
     }
 
     private function  _process_EmailSend($mailItem){
@@ -89,10 +80,21 @@ class GeckoMailer{
             $mail->IsMail();
         }
 
+        $mail->Sender = $mailItem->to;
 
         $mail->IsHTML(true);
-        $mail->From = Config::get('mail.from');
-        $mail->FromName = Config::get('mail.fromName');
+
+        if($mailItem->from != ''){
+            $mail->From = $mailItem->from;
+        }else{
+            $mail->From = Config::get('mail.from');
+        }
+
+        if($mailItem->from != ''){
+            $mail->FromName = $mailItem->fromName;
+        }else{
+            $mail->FromName = Config::get('mail.fromName');
+        }
 
         if(count($mailItem->to) > 1){
             foreach($mailItem->to as $emailAddress){
@@ -107,7 +109,7 @@ class GeckoMailer{
                 $mail->AddCC($emailAddress);
             }
         }else{
-            $mail->AddCC($mailItem->to);
+            $mail->AddCC($mailItem->cc);
         }
 
         $mail->Subject = $mailItem->subject;
@@ -137,14 +139,12 @@ class GeckoMailer{
             }
         }catch (Exception $ex){
             TextDebugging::LogError($ex->getMessage(),__CLASS__,__FILE__,__LINE__);
-            return false;
+            throw new \Whoops\Example\Exception("Email Template Blade Render Fails - Possibly undefended prop used");
         }
-
-        $mail->Sender = $mailItem->to;
 
         //$mail->AddReplyTo($fromemail, $fromname); // indicates ReplyTo headers
         return (bool) $mail->Send();
-}
+    }
 }
 
 ?>
