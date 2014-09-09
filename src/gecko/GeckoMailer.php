@@ -96,6 +96,8 @@ class GeckoMailer{
             $mail->FromName = Config::get('mail.fromName');
         }
 
+        $mailItem->to = explode(',',$mailItem->to);
+
         if(count($mailItem->to) > 1){
             foreach($mailItem->to as $emailAddress){
                 $mail->AddAddress($emailAddress);
