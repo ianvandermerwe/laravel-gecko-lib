@@ -7,6 +7,8 @@
 
 - Mailer with Email queue hookup
 
+- TextLogging and Email error
+
 - http://www.geckoweb.co.za
 
 #Installation
@@ -15,6 +17,44 @@ Require this package in your `composer.json` and update composer. This will down
 
 ```php
 "geckoweb/gecko": "dev-master"
+```
+
+The normal mail config add the following lines on top.
+
+```php
+/*
+|--------------------------------------------------------------------------
+| Gecko Mailer Vars
+|--------------------------------------------------------------------------
+| Use the Email Queue
+*/
+
+'use_queue' => true,
+
+'email_queue_important_batch' => 100,
+
+'email_queue_normal_batch' => 300,
+
+'email_default_cc' => 'admin@yourdomain.com',
+```
+
+For the text error logging you will need to add to your view : email/error/logEmail.blade.php
+
+```html
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+</head>
+<body>
+
+<h2>{{$heading}}</h2>
+
+<div>
+    {{$log}}
+</div>
+</body>
+</html>
 ```
 
 # License
