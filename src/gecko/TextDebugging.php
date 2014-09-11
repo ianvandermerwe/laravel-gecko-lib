@@ -57,11 +57,15 @@ class TextDebugging {
             'log' => $log
         );
 
-        Mail::send('emails/error/logEmail', $data, function($message)
+        /*Mail::send('emails/error/logEmail', $data, function($message)
         {
             $to = Config::get('app.admin_email_address');
             $message->to($to, 'Administrator')
                     ->subject('Error Email Log');
-        });
+        });*/
+
+        $mailer = new GeckoMailer();
+
+        $mailer->SendEmail(Config::get('app.admin_email_address'),'','Error Email Log','',1,'','',$data,'emails/error/logEmail');
     }
 }

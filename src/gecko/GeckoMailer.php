@@ -71,19 +71,22 @@ class GeckoMailer{
         $mail->CharSet = "utf-8";
 
         if (Config::get('mail.driver') == 'smtp') {
-        $mail->IsSMTP();
-        $mail->SMTPAuth = true;
-        $mail->Host = Config::get('mail.host');
-        $mail->Username = Config::get('mail.username');
-        $mail->Password = Config::get('mail.password');
+            $mail->IsSMTP();
+            $mail->SMTPAuth = true;
+            $mail->Host = Config::get('mail.host');
+            $mail->Username = Config::get('mail.username');
+            $mail->Password = Config::get('mail.password');
         } else {
             $mail->IsMail();
         }
 
-        //$mail->Sender = $mailItem->to; ??? possibly from
+        //Config CC adding
+        if(Config::get('mail.email_default_cc') != '')
+            $mail->AddCC(Config::get('mail.email_default_cc'));
 
         $mail->IsHTML(true);
 
+        //Normal FROM Adding
         if($mailItem->from != ''){
             $mail->From = $mailItem->from;
         }else{
@@ -96,25 +99,36 @@ class GeckoMailer{
             $mail->FromName = Config::get('mail.fromName');
         }
 
+        //Normal TO Adding
         if(count($mailItem->to > 1)){
 
             $mailItem->to = explode(',',$mailItem->to);
 
             foreach($mailItem->to as $emailAddress){
-                $mail->AddAddress($emailAddress);
+                if($emailAddress != ''){
+                    $mail->AddAddress($emailAddress);
+                }
             }
 
             $mailItem->to = implode(',',$mailItem->to);
         }else{
-            $mail->AddAddress($mailItem->to);
+            if($mailItem->to != '' && !empty($mailItem->to)){
+                $mail->AddAddress($mailItem->to);
+            }else{
+                throw new \Whoops\Example\Exception("Gecko Mailer Error To Address Cannot be empty");
+                die;
+            }
         }
 
+        //Normal CC Adding
         if(count($mailItem->cc) > 1){
             foreach($mailItem->cc as $emailAddress){
                 $mail->AddCC($emailAddress);
             }
         }else{
-            $mail->AddCC($mailItem->cc);
+            if($mailItem->cc != '' && !empty($mailItem->cc)){
+                $mail->AddCC($mailItem->cc);
+            }
         }
 
         $mail->Subject = $mailItem->subject;
