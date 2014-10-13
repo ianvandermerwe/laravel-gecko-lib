@@ -7,6 +7,7 @@
  */
 
 class TextDebugging {
+
     private function _init_logger(){
 
         if(file_exists (base_path() . "/logs") == false){
@@ -56,13 +57,6 @@ class TextDebugging {
             'heading' => 'Gecko System Error Log',
             'log' => $log
         );
-
-        /*Mail::send('emails/error/logEmail', $data, function($message)
-        {
-            $to = Config::get('app.admin_email_address');
-            $message->to($to, 'Administrator')
-                    ->subject('Error Email Log');
-        });*/
 
         $mailer = new GeckoMailer();
 

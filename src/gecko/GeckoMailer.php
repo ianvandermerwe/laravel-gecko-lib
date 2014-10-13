@@ -8,7 +8,9 @@
 
 class GeckoMailer{
 
-    public function ProcessEmail($mailItem){
+    public function ProcessEmail($mailId){
+
+        $mailItem = EmailItem::find($mailId);
 
         $ret = $this->_process_EmailSend($mailItem);
 
@@ -22,6 +24,9 @@ class GeckoMailer{
     /**
     $to -> string || implode(',',$array)
     $cc -> string || implode(',',$array)
+    $subject -> string
+    $message -> string
+    $data -> Object
     */
     public function SendEmail($to, $cc = "", $subject, $message, $priority = 5, $from = '', $fromName = '', $data = null, $template = "", $sendattachment = false, $file1 = "", $file2 = "", $file3 = "") {
 
@@ -57,15 +62,15 @@ class GeckoMailer{
         $mailItem->save();
 
         if (Config::get('mail.use_queue')){
-            return true;
+            //return true;
         } else {
-            $ret = $this->ProcessEmail($mailItem);
+            $ret = $this->ProcessEmail($mailItem->id);
+            //return $ret;
         }
-
-        return (bool) $ret;
     }
 
     private function _process_EmailSend($mailItem){
+
         $mail = new PHPMailer(true);
 
         $mail->CharSet = "utf-8";
@@ -79,10 +84,6 @@ class GeckoMailer{
         } else {
             $mail->IsMail();
         }
-
-        //Config CC adding
-        if(Config::get('mail.email_default_cc') != '')
-            $mail->AddCC(Config::get('mail.email_default_cc'));
 
         $mail->IsHTML(true);
 
@@ -100,17 +101,15 @@ class GeckoMailer{
         }
 
         //Normal TO Adding
-        if(count($mailItem->to > 1)){
+        $mailItem->to = explode(',',$mailItem->to);
 
-            $mailItem->to = explode(',',$mailItem->to);
+        if(count($mailItem->to > 1)){
 
             foreach($mailItem->to as $emailAddress){
                 if($emailAddress != ''){
                     $mail->AddAddress($emailAddress);
                 }
             }
-
-            $mailItem->to = implode(',',$mailItem->to);
         }else{
             if($mailItem->to != '' && !empty($mailItem->to)){
                 $mail->AddAddress($mailItem->to);
@@ -120,16 +119,22 @@ class GeckoMailer{
             }
         }
 
+        $mailItem->to = implode(',',$mailItem->to);
+
         //Normal CC Adding
-        if(count($mailItem->cc) > 1){
-            foreach($mailItem->cc as $emailAddress){
+        $mailItem->cc = explode(',',$mailItem->cc);
+
+        foreach($mailItem->cc as $emailAddress){
+            if($emailAddress != '' && !empty($emailAddress)){
                 $mail->AddCC($emailAddress);
             }
-        }else{
-            if($mailItem->cc != '' && !empty($mailItem->cc)){
-                $mail->AddCC($mailItem->cc);
-            }
         }
+
+        $mailItem->cc = implode(',',$mailItem->cc);
+
+        //Config CC adding
+        if(Config::get('mail.email_default_cc') != '')
+            $mail->AddCC(Config::get('mail.email_default_cc'));
 
         $mail->Subject = $mailItem->subject;
 
@@ -158,7 +163,7 @@ class GeckoMailer{
             }
         }catch (Exception $ex){
             TextDebugging::LogError($ex->getMessage(),__CLASS__,__FILE__,__LINE__);
-            throw new \Whoops\Example\Exception("Email Template Blade Render Fails - Possibly undefended prop used");
+            throw new \Whoops\Example\Exception("Email Template Blade Render Fails - Possibly undefined prop used");
         }
 
         //$mail->AddReplyTo($fromemail, $fromname); // indicates ReplyTo headers

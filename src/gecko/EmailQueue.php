@@ -66,18 +66,16 @@ class EmailQueue extends Eloquent{
     private function _proccess_mailItem($id){
         try
         {
-            $emailItem = EmailItem::find($id);
-
             $mailer = new GeckoMailer();
 
-            $mailer->ProcessEmail($emailItem);
+            $mailer->ProcessEmail($id);
         }
         catch(Exception $ex)
         {
             TextDebugging::LogError($ex,__CLASS__,__FILE__,__LINE__);
             return false;
         }
-        return $emailItem;
+        return true;
     }
 }
 
