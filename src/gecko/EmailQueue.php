@@ -48,6 +48,7 @@ class EmailQueue extends Eloquent{
     public function queueSendEmail($job,$data){
 
         $mailSent = $this->_process_mailItem($data['id']);
+        Log::info('Job Processed ' . json_encode($data) . ' ' . json_encode($job));
 
         if($mailSent == true){
             //DELETE if complete
@@ -58,7 +59,7 @@ class EmailQueue extends Eloquent{
         //CHECK's NUMBER OF ATTEMPTS
         if ($job->attempts() > Config::get('mail.email_queue_job_retries'))
         {
-            $job->delete();
+            //$job->delete();
         }
 
         //RELEASE if unsuccessful
