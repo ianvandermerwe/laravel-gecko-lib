@@ -12,6 +12,5 @@ return array(
     'PHPMailer' => $baseDir . '/src/gecko/geckoMailerLibs/class.phpmailer.php',
     'POP3' => $baseDir . '/src/gecko/geckoMailerLibs/class.pop3.php',
     'SMTP' => $baseDir . '/src/gecko/geckoMailerLibs/class.smtp.php',
-    'TextDebugging' => $baseDir . '/src/gecko/TextDebugging.php',
     'phpmailerException' => $baseDir . '/src/gecko/geckoMailerLibs/class.phpmailer.php',
 );

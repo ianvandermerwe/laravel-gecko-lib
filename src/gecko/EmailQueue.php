@@ -13,42 +13,22 @@ class EmailQueue extends Eloquent{
      * ----------------
      */
 
-    public static function proccess_mail_list(){
+    public static function force_process_mail_list(){
         $emailQueue = new EmailQueue();
 
-        $processAmountImportantLeft = Config::get('mail.email_queue_important_batch');
-        $processAmountLeft = Config::get('mail.email_queue_normal_batch');
+        $processAmountLeft = Config::get('mail.email_queue_batch');
 
         $processedSuccessfulCount = 0;
         $processedFailedCount = 0;
 
-
-        //PROCESSING OF IMPORTANT PRIORITY EMAIL ITEMS
-        $important_emailItems = EmailItem::where('priority','=','1')
-            ->where('sent_flag','=','0')
+        //PROCESSING OF EMAIL ITEMS
+        $emailItems = EmailItem::where('sent_flag','=','0')
             ->get();
-        if(count($important_emailItems) > 0){
-            foreach($important_emailItems as $emailItem){
-                if($processAmountImportantLeft > 0){
-                    $ret = $emailQueue->_proccess_mailItem($emailItem->id);
-                    if($ret == true){
-                        $processAmountImportantLeft--;
-                        $processedSuccessfulCount++;
-                    }else{
-                        $processedFailedCount++;
-                    }
-                }
-            }
-        }
 
-        //PROCESSING OF NORMAL PRIORITY EMAIL ITEMS
-        $normal_emailItems = EmailItem::where('priority','>','1')
-            ->where('sent_flag','=','0')
-            ->get();
-        if(count($normal_emailItems) > 0){
-            foreach($normal_emailItems as $emailItem){
+        if(count($emailItems) > 0){
+            foreach($emailItems as $emailItem){
                 if($processAmountLeft > 0){
-                    $ret = $emailQueue->_proccess_mailItem($emailItem->id);
+                    $ret = $emailQueue->_process_mailItem($emailItem->id);
                     if($ret == true){
                         $processAmountLeft--;
                         $processedSuccessfulCount++;
@@ -59,11 +39,33 @@ class EmailQueue extends Eloquent{
             }
         }
 
-        echo "Amount of emails has been sent out Successfully - " . $processedSuccessfulCount . "<br />";
-        echo "Amount of emails that has failed - " . $processedFailedCount . "<br />";
+        return [
+            'successful_emails' => $processedSuccessfulCount,
+            'failed_emails' => $processedFailedCount,
+        ];
     }
 
-    private function _proccess_mailItem($id){
+    public function queueSendEmail($job,$data){
+
+        $mailSent = $this->_process_mailItem($data['id']);
+
+        if($mailSent == true){
+            //DELETE if complete
+            $job->delete();
+            return true;
+        }
+
+        //CHECK's NUMBER OF ATTEMPTS
+        if ($job->attempts() > Config::get('mail.email_queue_job_retries'))
+        {
+            $job->delete();
+        }
+
+        //RELEASE if unsuccessful
+        $job->release();
+    }
+
+    private function _process_mailItem($id){
         try
         {
             $mailer = new GeckoMailer();
@@ -72,7 +74,7 @@ class EmailQueue extends Eloquent{
         }
         catch(Exception $ex)
         {
-            TextDebugging::LogError($ex,__CLASS__,__FILE__,__LINE__);
+            Log::error($ex . ' ' . __CLASS__ . ' ' . __FILE__ . ' ' . __LINE__);
             return false;
         }
         return true;

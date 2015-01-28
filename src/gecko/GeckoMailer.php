@@ -8,6 +8,12 @@
 
 class GeckoMailer{
 
+    public $rules = [
+        'to' => 'required',
+        'subject' => 'required',
+        'message' => 'required'
+    ];
+
     public function ProcessEmail($mailId){
 
         $mailItem = EmailItem::find($mailId);
@@ -28,21 +34,15 @@ class GeckoMailer{
     $message -> string
     $data -> Object
     */
-    public function SendEmail($to, $cc = "", $subject, $message, $priority = 5, $from = '', $fromName = '', $data = null, $template = "", $sendattachment = false, $file1 = "", $file2 = "", $file3 = "") {
-
-        $this->SendFullEmail($to, $cc, $subject, $message, $priority, $from, $fromName, $data, $template, $sendattachment, $file1, $file2, $file3);
-    }
-
-    private function SendFullEmail($to, $cc, $subject, $message, $priority, $from, $fromName, $data, $template, $sendattachment = false, $file1, $file2, $file3) {
+    public function SendEmail($to, $cc, $subject, $message, $from = '', $fromName = '', $data = NULL, $template = '') {
 
         $mailItem = new EmailItem();
         $mailItem->to = $to;
         $mailItem->cc = $cc;
         $mailItem->from = $from;
-        $mailItem->fromName = $fromName;
+        $mailItem->from_name = $fromName;
         $mailItem->subject = $subject;
         $mailItem->message = $message;
-        $mailItem->priority = $priority;
         $mailItem->sent_flag = 0;
 
         if($template != ''){
@@ -51,123 +51,75 @@ class GeckoMailer{
 
         $mailItem->data = json_encode($data);
 
-
-        $mailItem->send_attachment = $sendattachment;
-        if($sendattachment == true){
-            $mailItem->file1 = $file1;
-            $mailItem->file2 = $file2;
-            $mailItem->file3 = $file3;
-        }
-
         $mailItem->save();
 
         if (Config::get('mail.use_queue')){
-            //return true;
+
+            Queue::push('EmailQueue@queueSendEmail', array('id' => $mailItem->id));
+
+            return true;
         } else {
             $ret = $this->ProcessEmail($mailItem->id);
-            //return $ret;
+            return $ret;
         }
     }
 
     private function _process_EmailSend($mailItem){
 
-        $mail = new PHPMailer(true);
+        if($mailItem->email_template == '')
+            $mailItem->email_template = 'emails/default';
 
-        $mail->CharSet = "utf-8";
+        if($mailItem->message != '')
+            $mailItem->data = json_encode(['message'=> $mailItem->message ]);
 
-        if (Config::get('mail.driver') == 'smtp') {
-            $mail->IsSMTP();
-            $mail->SMTPAuth = true;
-            $mail->Host = Config::get('mail.host');
-            $mail->Username = Config::get('mail.username');
-            $mail->Password = Config::get('mail.password');
-        } else {
-            $mail->IsMail();
-        }
+        $ret = Mail::send($mailItem->email_template, ['data' => json_decode($mailItem->data)], function($message) use ($mailItem)
+        {
+            //SUBJECT
+            $message->subject($mailItem->subject);
 
-        $mail->IsHTML(true);
+            //FROM DETAILS
+            if($mailItem->from != ''){
+                $message->from($mailItem->from);
+            }else{
+                $message->from(Config::get('mail.from'));
+            }
 
-        //Normal FROM Adding
-        if($mailItem->from != ''){
-            $mail->From = $mailItem->from;
-        }else{
-            $mail->From = Config::get('mail.from');
-        }
-
-        if($mailItem->from != ''){
-            $mail->FromName = $mailItem->fromName;
-        }else{
-            $mail->FromName = Config::get('mail.fromName');
-        }
-
-        //Normal TO Adding
-        $mailItem->to = explode(',',$mailItem->to);
-
-        if(count($mailItem->to > 1)){
-
-            foreach($mailItem->to as $emailAddress){
-                if($emailAddress != ''){
-                    $mail->AddAddress($emailAddress);
+            //TO DETAILS
+            if(count($mailItem->to > 1)){
+                $message->to($mailItem->to);
+            }else{
+                if($mailItem->to != '' && !empty($mailItem->to)){
+                    $message->to($mailItem->to);
+                }else{
+                    throw new Exception("Gecko Mailer Error To Address Cannot be empty");
+                    die;
                 }
             }
-        }else{
-            if($mailItem->to != '' && !empty($mailItem->to)){
-                $mail->AddAddress($mailItem->to);
-            }else{
-                throw new \Whoops\Example\Exception("Gecko Mailer Error To Address Cannot be empty");
-                die;
+
+            //CC DETAILS
+            $mailItem->cc = explode(',',$mailItem->cc);
+
+            foreach($mailItem->cc as $emailAddress){
+                if($emailAddress != '' && !empty($emailAddress)){
+                    $message->cc($emailAddress);
+                }
             }
+
+            //BCC DETAILS
+            $bcc = explode(',',Config::get('app.default_bcc_email'));
+            foreach($bcc as $emailAddress){
+                $message->bcc($emailAddress);
+            }
+
+            //$message->attach($pathToFile);
+        });
+
+        if((bool)$ret == true){
+            $mailItem->sent_flag = 1;
+            $mailItem->save();
         }
 
-        $mailItem->to = implode(',',$mailItem->to);
-
-        //Normal CC Adding
-        $mailItem->cc = explode(',',$mailItem->cc);
-
-        foreach($mailItem->cc as $emailAddress){
-            if($emailAddress != '' && !empty($emailAddress)){
-                $mail->AddCC($emailAddress);
-            }
-        }
-
-        $mailItem->cc = implode(',',$mailItem->cc);
-
-        //Config CC adding
-        if(Config::get('mail.email_default_cc') != '')
-            $mail->AddCC(Config::get('mail.email_default_cc'));
-
-        $mail->Subject = $mailItem->subject;
-
-        if ($mailItem->send_attachment == true) {
-            if (!empty($mailItem->file1)) {
-                $ret = $mail->AddAttachment(Root() . $mailItem->file1, $mailItem->file1);
-            }
-            if (!empty($mailItem->file2)) {
-                $ret = $mail->AddAttachment(Root() . $mailItem->file2, $mailItem->file2);
-            }
-            if (!empty($mailItem->file3)) {
-                $ret = $mail->AddAttachment(Root() . $mailItem->file3, $mailItem->file3);
-            }
-            //$filename = "../../../loan_application_form.pdf";
-        }
-
-        //MESSAGE ASSIGNMENT
-        try{
-            if($mailItem->email_template != ''){
-                $mail->Body = View::make($mailItem->email_template)
-                    ->with('message',$mailItem->message)
-                    ->with('data',json_decode($mailItem->data))
-                    ->render();
-            }else{
-                $mail->Body = $mailItem->message;
-            }
-        }catch (Exception $ex){
-            TextDebugging::LogError($ex->getMessage(),__CLASS__,__FILE__,__LINE__);
-            throw new \Whoops\Example\Exception("Email Template Blade Render Fails - Possibly undefined prop used");
-        }
-
-        //$mail->AddReplyTo($fromemail, $fromname); // indicates ReplyTo headers
-        return (bool) $mail->Send();
+        return (bool)$ret;
     }
 }
 
