@@ -21,9 +21,10 @@ class GeckoMailer{
         $ret = $this->_process_EmailSend($mailItem);
 
         if($ret == true){
-            $mailItem->sent_flag = '1';
+            $mailItem->sent_flag = 1;
             $mailItem->save();
         }
+
         return $ret;
     }
 
@@ -72,7 +73,7 @@ class GeckoMailer{
         if($mailItem->message != '')
             $mailItem->data = json_encode(['message'=> $mailItem->message ]);
 
-        $ret = Mail::send($mailItem->email_template, ['data' => json_decode($mailItem->data)], function($message) use ($mailItem)
+        Mail::send($mailItem->email_template, ['data' => json_decode($mailItem->data)], function($message) use ($mailItem)
         {
             //SUBJECT
             $message->subject($mailItem->subject);
@@ -97,29 +98,36 @@ class GeckoMailer{
             }
 
             //CC DETAILS
-            $mailItem->cc = explode(',',$mailItem->cc);
+            $cc = explode(',',$mailItem->cc);
 
-            foreach($mailItem->cc as $emailAddress){
+            foreach($cc as $emailAddress){
                 if($emailAddress != '' && !empty($emailAddress)){
                     $message->cc($emailAddress);
                 }
             }
 
+            //DEFAULT CC DETAILS
+            $cc = explode(',',Config::get('mail.email_default_cc'));
+            foreach($cc as $emailAddress){
+                if(!empty($emailAddress)){
+                    $message->cc($emailAddress);
+                }
+            }
             //BCC DETAILS
-            $bcc = explode(',',Config::get('app.default_bcc_email'));
+            $bcc = explode(',',Config::get('mail.email_default_bcc'));
             foreach($bcc as $emailAddress){
-                $message->bcc($emailAddress);
+                if(!empty($emailAddress)){
+                    $message->bcc($emailAddress);
+                }
             }
 
             //$message->attach($pathToFile);
         });
 
-        if((bool)$ret == true){
-            $mailItem->sent_flag = 1;
-            $mailItem->save();
-        }
+        $mailItem->sent_flag = 1;
+        $mailItem->save();
 
-        return (bool)$ret;
+        return true;
     }
 }
 

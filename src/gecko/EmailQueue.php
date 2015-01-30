@@ -59,7 +59,7 @@ class EmailQueue extends Eloquent{
         //CHECK's NUMBER OF ATTEMPTS
         if ($job->attempts() > Config::get('mail.email_queue_job_retries'))
         {
-            //$job->delete();
+            $job->delete();
         }
 
         //RELEASE if unsuccessful
@@ -67,18 +67,11 @@ class EmailQueue extends Eloquent{
     }
 
     private function _process_mailItem($id){
-        try
-        {
-            $mailer = new GeckoMailer();
+        $mailer = new GeckoMailer();
 
-            $mailer->ProcessEmail($id);
-        }
-        catch(Exception $ex)
-        {
-            Log::error($ex . ' ' . __CLASS__ . ' ' . __FILE__ . ' ' . __LINE__);
-            return false;
-        }
-        return true;
+        $ret = $mailer->ProcessEmail($id);
+
+        return $ret;
     }
 }
 
