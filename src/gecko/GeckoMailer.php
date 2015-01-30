@@ -73,9 +73,7 @@ class GeckoMailer{
         if($mailItem->message != '')
             $mailItem->data = json_encode(['message'=> $mailItem->message ]);
 
-        try{
-
-        Mail::send($mailItem->email_template, ['data' => json_decode($mailItem->data)], function($message) use ($mailItem)
+        if(!Mail::send($mailItem->email_template, ['data' => json_decode($mailItem->data)], function($message) use ($mailItem)
         {
             //SUBJECT
             $message->subject($mailItem->subject);
@@ -124,10 +122,8 @@ class GeckoMailer{
             }
 
             //$message->attach($pathToFile);
-        });
-
-        }catch (Exception $ex){
-            throw new $ex;
+        })){
+            throw new Exception('Email Send Action Fail');
         }
 
         $mailItem->sent_flag = 1;
