@@ -8,12 +8,19 @@
 
 class GeckoMailer{
 
+    /**
+     * @var array
+     */
     public $rules = [
         'to' => 'required',
         'subject' => 'required',
         'message' => 'required'
     ];
 
+    /**
+     * @param $mailId
+     * @return bool
+     */
     public function ProcessEmail($mailId){
 
         $mailItem = EmailItem::find($mailId);
@@ -28,13 +35,18 @@ class GeckoMailer{
         return $ret;
     }
 
+
     /**
-    $to -> string || implode(',',$array)
-    $cc -> string || implode(',',$array)
-    $subject -> string
-    $message -> string
-    $data -> Object
-    */
+     * @param $to
+     * @param $cc
+     * @param $subject
+     * @param $message
+     * @param string $from
+     * @param string $fromName
+     * @param null $data
+     * @param string $template
+     * @return bool
+     */
     public function SendEmail($to, $cc, $subject, $message, $from = '', $fromName = '', $data = NULL, $template = '') {
 
         $mailItem = new EmailItem();
@@ -65,71 +77,109 @@ class GeckoMailer{
         }
     }
 
+    /**
+     * @param $mailItem
+     * @return bool
+     * @throws Exception
+     */
     private function _process_EmailSend($mailItem){
 
+        //----------EMAIL SETUP--------------
+        $mail = new PHPMailer(true);
+
+        $mail->CharSet = "utf-8";
+
+        if (Config::get('mail.driver') == 'smtp') {
+            $mail->IsSMTP();
+            $mail->SMTPAuth = true;
+            $mail->Host = Config::get('mail.host');
+            $mail->Username = Config::get('mail.username');
+            $mail->Password = Config::get('mail.password');
+        } else {
+            $mail->IsMail();
+        }
+
+        $mail->IsHTML(true);
+        //------------------------------------
+
+        //EMAIL TEMPLATE CHECK
         if($mailItem->email_template == '')
             $mailItem->email_template = 'emails/default';
 
+        //EMAIL MESSAGE CHECK
         if($mailItem->message != '')
             $mailItem->data = json_encode(['message'=> $mailItem->message ]);
 
-        if(!Mail::send($mailItem->email_template, ['data' => json_decode($mailItem->data)], function($message) use ($mailItem)
-        {
-            //SUBJECT
-            $message->subject($mailItem->subject);
+        //SUBJECT
+        $mail->Subject = $mailItem->subject;
 
-            //FROM DETAILS
-            if($mailItem->from != ''){
-                $message->from($mailItem->from);
-            }else{
-                $message->from(Config::get('mail.from'));
-            }
-
-            //TO DETAILS
-            if(count($mailItem->to > 1)){
-                $message->to($mailItem->to);
-            }else{
-                if($mailItem->to != '' && !empty($mailItem->to)){
-                    $message->to($mailItem->to);
-                }else{
-                    throw new Exception("Gecko Mailer Error To Address Cannot be empty");
-                    die;
-                }
-            }
-
-            //CC DETAILS
-            $cc = explode(',',$mailItem->cc);
-
-            foreach($cc as $emailAddress){
-                if($emailAddress != '' && !empty($emailAddress)){
-                    $message->cc($emailAddress);
-                }
-            }
-
-            //DEFAULT CC DETAILS
-            $cc = explode(',',Config::get('mail.email_default_cc'));
-            foreach($cc as $emailAddress){
-                if(!empty($emailAddress)){
-                    $message->cc($emailAddress);
-                }
-            }
-            //BCC DETAILS
-            $bcc = explode(',',Config::get('mail.email_default_bcc'));
-            foreach($bcc as $emailAddress){
-                if(!empty($emailAddress)){
-                    $message->bcc($emailAddress);
-                }
-            }
-
-            //$message->attach($pathToFile);
-        })){
-            throw new Exception('Email Send Action Fail');
+        //FROM
+        if(!empty($mailItem->from) && !empty($mailItem->fromName)){
+            $mail->From = $mailItem->from;
+            $mail->FromName = $mailItem->fromName;
+        }else{
+            $mail->From = Config::get('mail.from');
+            $mail->FromName = Config::get('mail.fromName');
         }
+
+        //ADDING REPLY TO HEADERS
+        //$mail->AddReplyTo($mailItem->from, $mailItem->fromName);
+
+        //ADDING TO
+        $to = explode(',',$mailItem->to);
+
+        foreach($to as $emailAddress){
+            if(!empty($emailAddress)){
+                $mail->AddAddress($emailAddress);
+            }
+        }
+
+        //ADDING CC
+        $cc = explode(',',$mailItem->cc);
+
+        foreach($cc as $emailAddress){
+            if(!empty($emailAddress)){
+                $mail->AddCC($emailAddress);
+            }
+        }
+
+        //ADDING CONFIG CC
+        if(Config::get('mail.email_default_cc') != '')
+            $mail->AddBCC(Config::get('mail.email_default_cc'));
+
+        //EMAIL TEMPLATE RENDER
+        try{
+            if($mailItem->email_template != ''){
+                $mail->Body = View::make($mailItem->email_template)
+                    ->with('message',$mailItem->message)
+                    ->with('data',json_decode($mailItem->data))
+                    ->render();
+            }else{
+                $mail->Body = $mailItem->message;
+            }
+        }catch (Exception $ex){
+            //throw new Exception("Email Template Blade Render Fails - Possibly undefined prop used");
+            throw new Exception($ex);
+        }
+
+        /*
+        if ($mailItem->send_attachment == true) {
+            if (!empty($mailItem->file1)) {
+                $ret = $mail->AddAttachment(Root() . $mailItem->file1, $mailItem->file1);
+            }
+            if (!empty($mailItem->file2)) {
+                $ret = $mail->AddAttachment(Root() . $mailItem->file2, $mailItem->file2);
+            }
+            if (!empty($mailItem->file3)) {
+                $ret = $mail->AddAttachment(Root() . $mailItem->file3, $mailItem->file3);
+            }
+            //$filename = "../../../loan_application_form.pdf";
+        }*/
 
         $mailItem->sent_flag = 1;
         $mailItem->save();
 
-        return true;
+        return (bool) $mail->Send();
     }
 }
 
