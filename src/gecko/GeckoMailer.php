@@ -73,6 +73,8 @@ class GeckoMailer{
         if($mailItem->message != '')
             $mailItem->data = json_encode(['message'=> $mailItem->message ]);
 
+        try{
+
         Mail::send($mailItem->email_template, ['data' => json_decode($mailItem->data)], function($message) use ($mailItem)
         {
             //SUBJECT
@@ -123,6 +125,10 @@ class GeckoMailer{
 
             //$message->attach($pathToFile);
         });
+
+        }catch (Exception $ex){
+            throw new $ex;
+        }
 
         $mailItem->sent_flag = 1;
         $mailItem->save();
