@@ -114,14 +114,14 @@ class GeckoMailer{
         $mail->Subject = $mailItem->subject;
 
         //FROM
-        if(!empty($mailItem->from) && !empty($mailItem->fromName)){
+        if(!empty($mailItem->from) && !empty($mailItem->from_name)){
             $mail->From = $mailItem->from;
-            $mail->FromName = $mailItem->fromName;
+            $mail->FromName = $mailItem->from_name;
         }else{
             $mail->From = Config::get('mail.from')[0];
             $mailItem->from = $mail->From;
-            $mail->FromName = Config::get('mail.fromName')[1];
-            $mailItem->fromName = $mail->FromName;
+            $mail->FromName = Config::get('mail.from')[1];
+            $mailItem->from_name = $mail->FromName;
         }
 
         //ADDING REPLY TO HEADERS
